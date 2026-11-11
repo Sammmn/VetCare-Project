@@ -1,42 +1,74 @@
 package com.backend.vetcare.model;
 
-public class Usuario {
-    private final String nomeCompleto;
-    private final String email;
-    private String senhaHash;
-    private final String telefone;
-    private final String cpf;
-    private final TipoUsuario tipo;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
-    public Usuario(String nomeCompleto, String email, String senhaHash, String telefone, String cpf, TipoUsuario tipo) {
-        this.nomeCompleto = nomeCompleto;
-        this.email = email;
-        this.senhaHash = senhaHash;
-        this.telefone = telefone;
-        this.cpf = cpf;
-        this.tipo = tipo;
+import java.util.Collection;
+import java.util.List;
+
+@Entity
+@Getter
+@Setter
+@Inheritance(strategy = InheritanceType.JOINED)
+public abstract class Usuario implements UserDetails {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String nome;
+
+    @Column(unique = true)
+    private String cpf;
+
+    @Column(unique = true)
+    private String email;
+
+    private String senha;
+
+    private String telefone;
+
+    @Enumerated(EnumType.STRING)
+    private Cargo cargo;
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of(
+                new SimpleGrantedAuthority("ROLE_" + cargo.name())
+        );
     }
 
-    public String getNomeCompleto() { 
-        return nomeCompleto; 
-    }
-    public String getEmail() { 
-        return email; 
-    }
-    public String getSenhaHash() { 
-        return senhaHash; 
-    }
-    public String getTelefone() { 
-        return telefone; 
-    }
-    public String getCpf() { 
-        return cpf; 
-    }
-    public TipoUsuario getTipo() { 
-        return tipo; 
+    @Override
+    public String getUsername() {
+        return email;
     }
 
-    public void setSenhaHash(String senhaHash) { 
-        this.senhaHash = senhaHash; 
+    @Override
+    public String getPassword() {
+        return senha;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
     }
 }
