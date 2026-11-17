@@ -15,6 +15,8 @@ public class PetDTO {
     private Integer idade;
     private Double peso;
     private String sexo;
+    private String porte;
+    private String cor;
     private LocalDate dataNascimento;
     private String observacoes;
     private Long tutorId;

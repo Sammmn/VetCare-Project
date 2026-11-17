@@ -32,6 +32,8 @@ public class PetService {
         pet.setIdade(dto.getIdade());
         pet.setPeso(dto.getPeso());
         pet.setSexo(dto.getSexo());
+        pet.setPorte(dto.getPorte());
+        pet.setCor(dto.getCor());
         pet.setDataNascimento(dto.getDataNascimento());
         pet.setObservacoes(dto.getObservacoes());
 
@@ -77,6 +79,8 @@ public class PetService {
         pet.setIdade(dto.getIdade());
         pet.setPeso(dto.getPeso());
         pet.setSexo(dto.getSexo());
+        pet.setPorte(dto.getPorte());
+        pet.setCor(dto.getCor());
         pet.setDataNascimento(dto.getDataNascimento());
         pet.setObservacoes(dto.getObservacoes());
 

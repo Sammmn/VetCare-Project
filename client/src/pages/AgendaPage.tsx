@@ -1,0 +1,464 @@
+import React, { useState } from 'react';
+import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { AgendamentoItem, Pet, Veterinario } from '../types/vetcare';
+
+interface AgendaPageProps {
+  agendamentos: AgendamentoItem[];
+  pets: Pet[];
+  veterinarios: Veterinario[];
+  searchQuery: string;
+  onAddAgendamento: (novo: Omit<AgendamentoItem, 'id'>) => void;
+  onCancelAgendamento: (id: number) => void;
+  onOpenAtendimento: (petId: number) => void;
+}
+
+const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00'];
+
+export const AgendaPage: React.FC<AgendaPageProps> = ({
+  agendamentos,
+  pets,
+  veterinarios,
+  searchQuery,
+  onAddAgendamento,
+  onCancelAgendamento,
+  onOpenAtendimento,
+}) => {
+  const [viewMode, setViewMode] = useState<'Dia' | 'Semana' | 'Profissional'>('Dia');
+  const [selectedVetFilter, setSelectedVetFilter] = useState<number | 'ALL'>('ALL');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [novoHorario, setNovoHorario] = useState('13:00');
+  const [novoPetId, setNovoPetId] = useState<number>(pets[0]?.id ?? 1);
+  const [novoVetId, setNovoVetId] = useState<number>(veterinarios[0]?.id ?? 1);
+  const [novoTipo, setNovoTipo] = useState('Consulta de rotina');
+  const [erroConflito, setErroConflito] = useState('');
+
+  const filteredAgendamentos = agendamentos.filter((item) => {
+    if (item.status === 'CANCELADA') return false;
+    if (selectedVetFilter !== 'ALL' && item.veterinarioId !== selectedVetFilter) {
+      return false;
+    }
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      item.petNome.toLowerCase().includes(q) ||
+      item.tutorNome.toLowerCase().includes(q) ||
+      item.tipo.toLowerCase().includes(q)
+    );
+  });
+
+  const findSlotAppointment = (slotHour: string, vetId: number) => {
+    const prefix = slotHour.slice(0, 2);
+    return filteredAgendamentos.find(
+      (a) => a.veterinarioId === vetId && a.horario.startsWith(prefix)
+    );
+  };
+
+  const handleOpenNewModal = (defaultTime = '13:00') => {
+    setNovoHorario(defaultTime);
+    setErroConflito('');
+    setModalOpen(true);
+  };
+
+  const handleSalvarAgendamento = (e: React.FormEvent) => {
+    e.preventDefault();
+    const conflito = agendamentos.some(
+      (a) =>
+        a.status !== 'CANCELADA' &&
+        a.veterinarioId === novoVetId &&
+        a.horario.slice(0, 2) === novoHorario.slice(0, 2)
+    );
+    if (conflito) {
+      setErroConflito(
+        'Conflito de horário: este veterinário já possui um agendamento neste horário.'
+      );
+      return;
+    }
+
+    const petObj = pets.find((p) => p.id === Number(novoPetId)) ?? pets[0];
+    const vetObj =
+      veterinarios.find((v) => v.id === Number(novoVetId)) ?? veterinarios[0];
+
+    if (!petObj || ! petObj.tutorId) {
+      setErroConflito('Vínculo obrigatório: o animal precisa ter um tutor vinculado.');
+      return;
+    }
+
+    onAddAgendamento({
+      horario: novoHorario,
+      petId: petObj.id,
+      petNome: petObj.nome,
+      tutorId: petObj.tutorId,
+      tutorNome: petObj.tutorNome,
+      veterinarioId: vetObj.id,
+      veterinarioNome: vetObj.nome,
+      tipo: novoTipo,
+      status: 'CONFIRMADA',
+      cor: 'teal',
+      data: '2025-06-18',
+    });
+    setModalOpen(false);
+  };
+
+  return (
+    <div className="page-content">
+      <div className="toolbar-row">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+          <div className="segmented-control">
+            {(['Dia', 'Semana', 'Profissional'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={`segment-btn ${viewMode === mode ? 'active' : ''}`}
+                onClick={() => {
+                  setViewMode(mode);
+                  if (mode !== 'Profissional') setSelectedVetFilter('ALL');
+                }}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+
+          {viewMode === 'Profissional' && (
+            <select
+              className="form-select"
+              style={{ width: '200px', padding: '7px 12px' }}
+              value={selectedVetFilter}
+              onChange={(e) =>
+                setSelectedVetFilter(
+                  e.target.value === 'ALL' ? 'ALL' : Number(e.target.value)
+                )
+              }
+            >
+              <option value="ALL">Todos os profissionais</option>
+              {veterinarios.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nome} ({v.especialidade})
+                </option>
+              ))}
+            </select>
+          )}
+
+          <div className="date-nav">
+            <button type="button" className="date-nav-btn" aria-label="Dia anterior">
+              <ChevronLeft size={16} />
+            </button>
+            <span style={{ fontWeight: 600, fontSize: '13px', padding: '0 4px' }}>Hoje</span>
+            <button type="button" className="date-nav-btn" aria-label="Próximo dia">
+              <ChevronRight size={16} />
+            </button>
+            <span style={{ marginLeft: '6px' }}>
+              <strong>Quarta-feira,</strong>{' '}
+              <span style={{ color: '#64748b' }}>18 de junho</span>
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => handleOpenNewModal('13:00')}
+        >
+          <Plus size={16} />
+          <span>Novo agendamento</span>
+        </button>
+      </div>
+
+      <div className="agenda-grid-layout">
+        <div className="card schedule-table-card">
+          <div className="schedule-header-row">
+            <div />
+            {veterinarios.slice(0, 2).map((vet) => (
+              <div key={vet.id} className="schedule-col-header">
+                <div className="vet-col-name">{vet.nome}</div>
+                <div className="vet-col-spec">{vet.especialidade}</div>
+              </div>
+            ))}
+          </div>
+
+          {TIME_SLOTS.map((slot) => {
+            const vet1 = veterinarios[0];
+            const vet2 = veterinarios[1];
+            const appt1 = vet1 ? findSlotAppointment(slot, vet1.id) : undefined;
+            const appt2 = vet2 ? findSlotAppointment(slot, vet2.id) : undefined;
+
+            if (slot === '13:00' && !appt1 && !appt2) {
+              return (
+                <div key={slot} className="schedule-row">
+                  <div className="schedule-time-cell">{slot}</div>
+                  <div className="schedule-slot-span">
+                    <button
+                      type="button"
+                      className="available-pill-btn"
+                      onClick={() => handleOpenNewModal('13:00')}
+                    >
+                      Horário disponível · clique para agendar
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div key={slot} className="schedule-row">
+                <div className="schedule-time-cell">{slot}</div>
+                <div className="schedule-slot-cell">
+                  {appt1 && (
+                    <div
+                      className={`appt-card ${appt1.cor}`}
+                      onClick={() => onOpenAtendimento(appt1.petId)}
+                      title="Clique para abrir o prontuário de atendimento"
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div className="appt-title">
+                          {appt1.horario} · {appt1.petNome}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              window.confirm(
+                                `Deseja cancelar o agendamento de ${appt1.petNome} às ${appt1.horario}?`
+                              )
+                            ) {
+                              onCancelAgendamento(appt1.id);
+                            }
+                          }}
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            cursor: 'pointer',
+                            color: '#64748b',
+                            padding: '2px',
+                          }}
+                          title="Cancelar consulta"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                      <div className="appt-sub">{appt1.tipo}</div>
+                    </div>
+                  )}
+                </div>
+                <div className="schedule-slot-cell">
+                  {appt2 && (
+                    <div
+                      className={`appt-card ${appt2.cor}`}
+                      onClick={() => onOpenAtendimento(appt2.petId)}
+                      title="Clique para abrir o prontuário de atendimento"
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div className="appt-title">
+                          {appt2.horario} · {appt2.petNome}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              window.confirm(
+                                `Deseja cancelar o agendamento de ${appt2.petNome} às ${appt2.horario}?`
+                              )
+                            ) {
+                              onCancelAgendamento(appt2.id);
+                            }
+                          }}
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            cursor: 'pointer',
+                            color: '#64748b',
+                            padding: '2px',
+                          }}
+                          title="Cancelar consulta"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                      <div className="appt-sub">{appt2.tipo}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="side-widgets-col">
+          <div className="card widget-card">
+            <div className="widget-header">
+              <span className="widget-title">Resumo do dia</span>
+              <span className="badge-teal">8 consultas</span>
+            </div>
+            <div className="summary-stats-grid">
+              <div className="summary-stat-box">
+                <div className="summary-stat-num">06</div>
+                <div className="summary-stat-label">Confirmadas</div>
+              </div>
+              <div className="summary-stat-box">
+                <div className="summary-stat-num">02</div>
+                <div className="summary-stat-label">A confirmar</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card widget-card">
+            <div className="widget-header">
+              <span className="widget-title">Próximos</span>
+            </div>
+            <div className="upcoming-list">
+              {filteredAgendamentos.slice(0, 4).map((item) => (
+                <div
+                  key={item.id}
+                  className="upcoming-item"
+                  onClick={() => onOpenAtendimento(item.petId)}
+                >
+                  <div className="upcoming-item-left">
+                    <span className={`dot ${item.cor}`} />
+                    <div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 700 }}>
+                        {item.horario} · {item.petNome}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        {item.veterinarioNome}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight size={15} color="#94a3b8" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {modalOpen && (
+        <div className="modal-backdrop" onClick={() => setModalOpen(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '18px',
+              }}
+            >
+              <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Novo agendamento</h3>
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {erroConflito && (
+              <div
+                style={{
+                  backgroundColor: '#fff1f2',
+                  border: '1px solid #fecdd3',
+                  color: '#be123c',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  marginBottom: '14px',
+                }}
+              >
+                {erroConflito}
+              </div>
+            )}
+
+            <form onSubmit={handleSalvarAgendamento}>
+              <div className="form-group">
+                <label className="form-label">Paciente (Animal e Tutor) *</label>
+                <select
+                  className="form-select"
+                  value={novoPetId}
+                  onChange={(e) => setNovoPetId(Number(e.target.value))}
+                >
+                  {pets.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome} ({p.especie}) — Tutor: {p.tutorNome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-row-2">
+                <div className="form-group">
+                  <label className="form-label">Profissional *</label>
+                  <select
+                    className="form-select"
+                    value={novoVetId}
+                    onChange={(e) => setNovoVetId(Number(e.target.value))}
+                  >
+                    {veterinarios.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.nome} — {v.especialidade}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Horário *</label>
+                  <select
+                    className="form-select"
+                    value={novoHorario}
+                    onChange={(e) => setNovoHorario(e.target.value)}
+                  >
+                    <option value="08:00">08:00</option>
+                    <option value="09:00">09:00</option>
+                    <option value="10:00">10:00</option>
+                    <option value="11:00">11:00</option>
+                    <option value="12:00">12:00</option>
+                    <option value="13:00">13:00</option>
+                    <option value="14:00">14:00</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Tipo de atendimento *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={novoTipo}
+                  onChange={(e) => setNovoTipo(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-footer-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setModalOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary">
+                  Confirmar agendamento
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

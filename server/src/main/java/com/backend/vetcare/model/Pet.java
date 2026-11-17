@@ -31,6 +31,10 @@ public class Pet {
 
     private String sexo;
 
+    private String porte;
+
+    private String cor;
+
     private LocalDate dataNascimento;
 
     @Column(columnDefinition = "TEXT")

@@ -21,6 +21,8 @@ public class PetResponseDTO {
     private Integer idade;
     private Double peso;
     private String sexo;
+    private String porte;
+    private String cor;
     private LocalDate dataNascimento;
     private String observacoes;
     private Long tutorId;
@@ -34,6 +36,8 @@ public class PetResponseDTO {
         this.idade = pet.getIdade();
         this.peso = pet.getPeso();
         this.sexo = pet.getSexo();
+        this.porte = pet.getPorte();
+        this.cor = pet.getCor();
         this.dataNascimento = pet.getDataNascimento();
         this.observacoes = pet.getObservacoes();
         this.tutorId = (pet.getTutor() != null) ? pet.getTutor().getId() : null;
