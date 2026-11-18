@@ -14,7 +14,7 @@ public interface ConsultaRepository extends JpaRepository<Consulta, Long> {
 
     @Query("""
         SELECT c FROM Consulta c
-        WHERE c.profissional.id = :profissionalId
+        WHERE c.veterinario.id = :profissionalId
           AND c.inicio >= :inicio
           AND c.inicio <= :fim
         ORDER BY c.inicio ASC

@@ -1,15 +1,13 @@
 package com.backend.vetcare.repositories;
 
-
 import com.backend.vetcare.model.Administrador;
-import com.backend.vetcare.model.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface AdministradorRepository extends JpaRepository<Usuario, Long> {
+public interface AdministradorRepository extends JpaRepository<Administrador, Long> {
 
     Optional<Administrador> findByEmail(String email);
 

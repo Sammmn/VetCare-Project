@@ -1,6 +1,8 @@
 package com.backend.vetcare.controller;
 
-
+import com.backend.vetcare.dto.response.HorariosDisponiveisPorDataDTO;
+import com.backend.vetcare.model.Agenda;
+import com.backend.vetcare.service.AgendaService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

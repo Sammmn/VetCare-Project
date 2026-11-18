@@ -1,5 +1,8 @@
 package com.backend.vetcare.controller;
 
+import com.backend.vetcare.dto.request.RegistroAtendimentoDTO;
+import com.backend.vetcare.dto.response.ConsultaResponseDTO;
+import com.backend.vetcare.service.ConsultaService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +36,7 @@ public class ConsultaController {
     public ResponseEntity<ConsultaResponseDTO> marcarRealizada(
             @PathVariable Long id,
             @RequestParam Long profissionalId,
-            @RequestBody @Valid RegistroAtendimentoDTO dados
+            @RequestBody RegistroAtendimentoDTO dados
     ) {
         ConsultaResponseDTO resultado = consultaService.marcarComoRealizada(id, profissionalId, dados);
         return ResponseEntity.ok(resultado);

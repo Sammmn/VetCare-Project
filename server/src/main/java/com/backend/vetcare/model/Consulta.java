@@ -30,6 +30,9 @@ public class Consulta {
     private String observacoes;
 
     @ManyToOne
+    private Pet pet;
+
+    @ManyToOne
     private Tutor tutor;
 
     @ManyToOne

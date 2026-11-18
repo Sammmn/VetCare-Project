@@ -1,9 +1,8 @@
 package com.backend.vetcare.service;
 
-import org.example.vitalink.dto.request.AdministradorDTO;
-import org.example.vitalink.dto.request.LoginDTO;
-import org.example.vitalink.model.Administrador;
-import org.example.vitalink.repositories.AdministradorRepository;
+import com.backend.vetcare.dto.request.AdministradorDTO;
+import com.backend.vetcare.model.Administrador;
+import com.backend.vetcare.repositories.AdministradorRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -19,16 +18,16 @@ public class AdministradorService {
     }
 
     public Administrador cadastrar(AdministradorDTO dto) {
-
         if (repository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email já cadastrado");
         }
 
         Administrador administrador = new Administrador();
-
         administrador.setNome(dto.getNome());
         administrador.setCpf(dto.getCpf());
         administrador.setEmail(dto.getEmail());
+        administrador.setTelefone(dto.getTelefone());
+        administrador.setNivelAcesso(dto.getNivelAcesso());
         administrador.setSenha(passwordEncoder.encode(dto.getSenha()));
 
         return repository.save(administrador);

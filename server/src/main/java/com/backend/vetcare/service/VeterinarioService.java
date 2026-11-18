@@ -18,13 +18,11 @@ public class VeterinarioService {
     private final PasswordEncoder passwordEncoder;
 
     public VeterinarioService(VeterinarioRepository veterinarioRepository, PasswordEncoder passwordEncoder) {
-
         this.veterinarioRepository = veterinarioRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     public Veterinario cadastrar(VeterinarioDTO dto) {
-
         if (veterinarioRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email já cadastrado.");
         }
@@ -34,39 +32,40 @@ public class VeterinarioService {
         }
 
         if (veterinarioRepository.existsByRegistroProfissional(dto.getRegistroProfissional())) {
-
             throw new RuntimeException("Registro profissional já cadastrado.");
         }
 
         Veterinario veterinario = new Veterinario();
-
         veterinario.setNome(dto.getNome());
         veterinario.setCpf(dto.getCpf());
         veterinario.setEmail(dto.getEmail());
         veterinario.setTelefone(dto.getTelefone());
-
         veterinario.setRegistroProfissional(dto.getRegistroProfissional());
-
+        veterinario.setEspecialidade(dto.getEspecialidade());
         veterinario.setBiografia(dto.getBiografia());
-
         veterinario.setValorConsulta(dto.getValorConsulta());
-
         veterinario.setSenha(passwordEncoder.encode(dto.getSenha()));
 
         return veterinarioRepository.save(veterinario);
     }
 
     public Veterinario buscarPorId(Long id) {
-
-        return veterinarioRepository.findById(id).orElseThrow(() -> new RuntimeException("Médico não encontrado."));
+        return veterinarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Veterinário não encontrado."));
     }
 
     public List<Veterinario> listarTodos() {
         return veterinarioRepository.findAll();
     }
 
-    public List<Veterinario> buscarPorEspecialidade(Long id) {
-        return veterinarioRepository.findByEspecialidadesId(id);
+    public List<Veterinario> buscarPorEspecialidade(String especialidade) {
+        return veterinarioRepository.findByEspecialidadeContainingIgnoreCase(especialidade);
+    }
+
+    public List<VeterinarioListDTO> listarPorEspecialidade(String especialidade) {
+        return veterinarioRepository.findByEspecialidadeContainingIgnoreCase(especialidade).stream()
+                .map(VeterinarioListDTO::new)
+                .collect(Collectors.toList());
     }
 
     public List<VeterinarioListDTO> listarTodosFormatado() {
@@ -76,7 +75,8 @@ public class VeterinarioService {
     }
 
     public Veterinario login(LoginDTO dto) {
-        Veterinario veterinario = veterinarioRepository.findByEmail(dto.getEmail()).orElseThrow(() -> new RuntimeException("Médico não encontrado."));
+        Veterinario veterinario = veterinarioRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() -> new RuntimeException("Veterinário não encontrado."));
         if (!passwordEncoder.matches(dto.getSenha(), veterinario.getSenha())) {
             throw new RuntimeException("Senha inválida.");
         }

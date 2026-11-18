@@ -1,9 +1,9 @@
 package com.backend.vetcare.service;
 
-import org.example.vitalink.dto.response.HorarioDisponivelDTO;
-import org.example.vitalink.dto.response.HorariosDisponiveisPorDataDTO;
-import org.example.vitalink.model.Agenda;
-import org.example.vitalink.repositories.AgendaRepository;
+import com.backend.vetcare.dto.response.HorarioDisponivelDTO;
+import com.backend.vetcare.dto.response.HorariosDisponiveisPorDataDTO;
+import com.backend.vetcare.model.Agenda;
+import com.backend.vetcare.repositories.AgendaRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;

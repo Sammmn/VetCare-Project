@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface VeterinarioRepository extends JpaRepository <Veterinario, Long> {
+public interface VeterinarioRepository extends JpaRepository<Veterinario, Long> {
 
     Optional<Veterinario> findByEmail(String email);
 
@@ -16,7 +16,7 @@ public interface VeterinarioRepository extends JpaRepository <Veterinario, Long>
 
     boolean existsByCpf(String cpf);
 
-    List<Veterinario> findByEspecialidadesId(Long id);
+    List<Veterinario> findByEspecialidadeContainingIgnoreCase(String especialidade);
 
     boolean existsByRegistroProfissional(String registroProfissional);
 }

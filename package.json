@@ -1,0 +1,23 @@
+{
+  "name": "vetcare-project",
+  "version": "1.0.0",
+  "description": "Projeto desenvolvido para a disciplina **Engenharia de Software 1** — Instituto de Computação (UFBA), sob orientação da **Profa. Dra. Larissa Barbosa Leôncio Pinheiro**.",
+  "homepage": "https://github.com/Sammmn/VetCare-Project#readme",
+  "bugs": {
+    "url": "https://github.com/Sammmn/VetCare-Project/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sammmn/VetCare-Project.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
