@@ -4,17 +4,16 @@ import com.backend.vetcare.model.Consulta;
 import com.backend.vetcare.model.StatusConsulta;
 import lombok.Getter;
 import lombok.Setter;
-
-
 import java.time.LocalDateTime;
 
 @Getter
 @Setter
 public class ConsultaResponseDTO {
-
     private Long id;
     private Long profissionalId;
     private String profissionalNome;
+    private Long petId;
+    private String petNome;
     private Long pacienteId;
     private String pacienteNome;
     private LocalDateTime inicio;
@@ -28,6 +27,8 @@ public class ConsultaResponseDTO {
         this.id = consulta.getId();
         this.profissionalId = (consulta.getVeterinario() != null) ? consulta.getVeterinario().getId() : null;
         this.profissionalNome = (consulta.getVeterinario() != null) ? consulta.getVeterinario().getNome() : null;
+        this.petId = (consulta.getPet() != null) ? consulta.getPet().getId() : null;
+        this.petNome = (consulta.getPet() != null) ? consulta.getPet().getNome() : null;
         this.pacienteId = (consulta.getTutor() != null) ? consulta.getTutor().getId() : null;
         this.pacienteNome = (consulta.getTutor() != null) ? consulta.getTutor().getNome() : null;
         this.inicio = consulta.getInicio();

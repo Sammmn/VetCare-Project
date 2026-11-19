@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { AgendaPage } from './pages/AgendaPage';
@@ -12,6 +12,10 @@ import {
   INITIAL_PETS,
   INITIAL_TUTORES,
   INITIAL_VETERINARIOS,
+  listarConsultasBackend,
+  listarPetsBackend,
+  listarTutoresBackend,
+  listarVeterinariosBackend,
 } from './services/api';
 import {
   AgendamentoItem,
@@ -21,6 +25,7 @@ import {
   ProntuarioRegistro,
   ScreenTab,
   Tutor,
+  Veterinario,
 } from './types/vetcare';
 
 export function App() {
@@ -31,11 +36,9 @@ export function App() {
 
   const [tutores, setTutores] = useState<Tutor[]>(INITIAL_TUTORES);
   const [pets, setPets] = useState<Pet[]>(INITIAL_PETS);
-  const [agendamentos, setAgendamentos] =
-    useState<AgendamentoItem[]>(INITIAL_AGENDAMENTOS);
-  const [historico, setHistorico] = useState<ProntuarioRegistro[]>(
-    INITIAL_HISTORICO_CLINICO
-  );
+  const [veterinarios, setVeterinarios] = useState<Veterinario[]>(INITIAL_VETERINARIOS);
+  const [agendamentos, setAgendamentos] = useState<AgendamentoItem[]>(INITIAL_AGENDAMENTOS);
+  const [historico, setHistorico] = useState<ProntuarioRegistro[]>(INITIAL_HISTORICO_CLINICO);
   const [pagamentos, setPagamentos] = useState<PagamentoItem[]>(INITIAL_PAGAMENTOS);
   const [selectedPetId, setSelectedPetId] = useState<number>(1);
 
@@ -43,29 +46,43 @@ export function App() {
     setToastMsg(msg);
     setTimeout(() => {
       setToastMsg(null);
-    }, 3500);
+    }, 4000);
   };
 
+  useEffect(() => {
+    async function sincronizarBackend() {
+      try {
+        const [tutoresApi, petsApi, vetsApi, consultasApi] = await Promise.all([
+          listarTutoresBackend(),
+          listarPetsBackend(),
+          listarVeterinariosBackend(),
+          listarConsultasBackend(),
+        ]);
+        if (tutoresApi.length > 0) setTutores(tutoresApi);
+        if (petsApi.length > 0) {
+          setPets(petsApi);
+          setSelectedPetId(petsApi[0].id);
+        }
+        if (vetsApi.length > 0) setVeterinarios(vetsApi);
+        if (consultasApi.length > 0) setAgendamentos(consultasApi);
+      } catch {
+        // Mantém fallback local caso o back-end esteja offline
+      }
+    }
+    sincronizarBackend();
+  }, []);
+
   const screenHeaders: Record<ScreenTab, { title: string; subtitle: string }> = {
-    agenda: {
-      title: 'Agenda',
-      subtitle: 'Organize os atendimentos da clínica',
-    },
-    atendimento: {
-      title: 'Atendimento',
-      subtitle: 'Prontuário clínico em andamento',
-    },
-    pacientes: {
-      title: 'Novo paciente',
-      subtitle: 'Cadastre o animal e vincule seu tutor',
-    },
-    financeiro: {
-      title: 'Financeiro',
-      subtitle: 'Acompanhe a saúde financeira da clínica',
-    },
+    agenda: { title: 'Agenda', subtitle: 'Organize os atendimentos da clínica' },
+    atendimento: { title: 'Atendimento', subtitle: 'Prontuário clínico em andamento' },
+    pacientes: { title: 'Novo paciente', subtitle: 'Cadastre o animal e vincule seu tutor' },
+    financeiro: { title: 'Financeiro', subtitle: 'Acompanhe a saúde financeira da clínica' },
   };
 
   const selectedPet = pets.find((p) => p.id === selectedPetId) ?? pets[0];
+  const agendamentoDoPet = agendamentos.find(
+    (a) => a.petId === selectedPet?.id && a.status !== 'CANCELADA'
+  );
 
   return (
     <div className="app-shell">
@@ -97,22 +114,15 @@ export function App() {
           <AgendaPage
             agendamentos={agendamentos}
             pets={pets}
-            veterinarios={INITIAL_VETERINARIOS}
+            veterinarios={veterinarios}
             searchQuery={searchQuery}
             onAddAgendamento={(novo) => {
-              setAgendamentos((prev) => [
-                ...prev,
-                { ...novo, id: prev.length + 10 },
-              ]);
-              showToast(
-                `Agendamento de ${novo.petNome} confirmado para ${novo.horario}!`
-              );
+              setAgendamentos((prev) => [...prev, novo]);
+              showToast(`Agendamento de ${novo.petNome} confirmado para ${novo.horario}!`);
             }}
             onCancelAgendamento={(id) => {
               setAgendamentos((prev) =>
-                prev.map((a) =>
-                  a.id === id ? { ...a, status: 'CANCELADA' } : a
-                )
+                prev.map((a) => (a.id === id ? { ...a, status: 'CANCELADA' } : a))
               );
               showToast('Agendamento cancelado com sucesso.');
             }}
@@ -120,18 +130,17 @@ export function App() {
               setSelectedPetId(petId);
               setActiveTab('atendimento');
             }}
+            onNotify={showToast}
           />
         )}
 
         {activeTab === 'atendimento' && selectedPet && (
           <AtendimentoPage
             pet={selectedPet}
+            agendamentoAtivo={agendamentoDoPet}
             historico={historico.filter((h) => h.petId === selectedPet.id || h.petId === 1)}
             onSaveProntuarioVersion={(novoReg) => {
-              setHistorico((prev) => [
-                { ...novoReg, id: Date.now() },
-                ...prev,
-              ]);
+              setHistorico((prev) => [{ ...novoReg, id: Date.now() }, ...prev]);
             }}
             onNotify={showToast}
           />
@@ -142,18 +151,10 @@ export function App() {
             pets={pets}
             tutores={tutores}
             onAddPetAndTutor={(novoPet, novoTutor) => {
-              let tutorIdFinal = novoPet.tutorId;
               if (novoTutor) {
-                tutorIdFinal = tutores.length + 1;
-                setTutores((prev) => [
-                  ...prev,
-                  { ...novoTutor, id: tutorIdFinal },
-                ]);
+                setTutores((prev) => [...prev, novoTutor]);
               }
-              setPets((prev) => [
-                ...prev,
-                { ...novoPet, id: prev.length + 1, tutorId: tutorIdFinal },
-              ]);
+              setPets((prev) => [...prev, novoPet]);
             }}
             onNotify={showToast}
           />
@@ -164,10 +165,7 @@ export function App() {
             pagamentos={pagamentos}
             pets={pets}
             onAddPagamento={(novo) => {
-              setPagamentos((prev) => [
-                { ...novo, id: prev.length + 10 },
-                ...prev,
-              ]);
+              setPagamentos((prev) => [{ ...novo, id: prev.length + 10 }, ...prev]);
               showToast('Pagamento registrado com sucesso!');
             }}
           />

@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -19,6 +20,7 @@ public class VeterinarioListDTO {
     private String email;
     private String telefone;
     private String registroProfissional;
+    private String especialidade;
     private BigDecimal valorConsulta;
     private String biografia;
     private Double avaliacao;
@@ -31,7 +33,9 @@ public class VeterinarioListDTO {
         this.email = veterinario.getEmail();
         this.telefone = veterinario.getTelefone();
         this.registroProfissional = veterinario.getRegistroProfissional();
+        this.especialidade = veterinario.getEspecialidade();
         this.valorConsulta = veterinario.getValorConsulta();
         this.biografia = veterinario.getBiografia();
+        this.especialidades = veterinario.getEspecialidade() != null ? List.of(veterinario.getEspecialidade()) : List.of();
     }
 }

@@ -1,12 +1,13 @@
 package com.backend.vetcare.controller;
 
+import com.backend.vetcare.dto.request.ConsultaRequestDTO;
 import com.backend.vetcare.dto.request.RegistroAtendimentoDTO;
 import com.backend.vetcare.dto.response.ConsultaResponseDTO;
 import com.backend.vetcare.service.ConsultaService;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDate;
 import java.util.List;
 
@@ -14,31 +15,41 @@ import java.util.List;
 @RequestMapping("/consultas")
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 public class ConsultaController {
-
     private final ConsultaService consultaService;
 
     public ConsultaController(ConsultaService consultaService) {
         this.consultaService = consultaService;
     }
 
-    // RF10: GET /consultas/agenda?profissionalId=1&data=2026-10-05
+    @GetMapping
+    public ResponseEntity<List<ConsultaResponseDTO>> listarTodas() {
+        return ResponseEntity.ok(consultaService.listarTodas());
+    }
+
     @GetMapping("/agenda")
     public ResponseEntity<List<ConsultaResponseDTO>> obterAgenda(
             @RequestParam Long profissionalId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data
     ) {
-        List<ConsultaResponseDTO> agenda = consultaService.obterAgendaProfissional(profissionalId, data);
-        return ResponseEntity.ok(agenda);
+        return ResponseEntity.ok(consultaService.obterAgendaProfissional(profissionalId, data));
     }
 
-    // RF11: PATCH /consultas/{id}/realizar?profissionalId=1
+    @PostMapping
+    public ResponseEntity<ConsultaResponseDTO> agendar(@RequestBody ConsultaRequestDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(consultaService.agendar(dto));
+    }
+
+    @PatchMapping("/{id}/cancelar")
+    public ResponseEntity<ConsultaResponseDTO> cancelar(@PathVariable Long id) {
+        return ResponseEntity.ok(consultaService.cancelar(id));
+    }
+
     @PatchMapping("/{id}/realizar")
     public ResponseEntity<ConsultaResponseDTO> marcarRealizada(
             @PathVariable Long id,
             @RequestParam Long profissionalId,
             @RequestBody RegistroAtendimentoDTO dados
     ) {
-        ConsultaResponseDTO resultado = consultaService.marcarComoRealizada(id, profissionalId, dados);
-        return ResponseEntity.ok(resultado);
+        return ResponseEntity.ok(consultaService.marcarComoRealizada(id, profissionalId, dados));
     }
 }
