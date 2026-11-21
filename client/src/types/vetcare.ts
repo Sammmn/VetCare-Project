@@ -18,7 +18,7 @@ export interface Pet {
   sexo: string;
   dataNascimento: string;
   idade?: number;
-  peso: number;
+  peso?: number;
   porte: string;
   cor: string;
   observacoes: string;

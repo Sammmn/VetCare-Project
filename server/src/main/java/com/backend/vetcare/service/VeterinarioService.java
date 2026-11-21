@@ -1,85 +1,74 @@
 package com.backend.vetcare.service;
 
-import com.backend.vetcare.dto.request.LoginDTO;
+import com.backend.vetcare.dto.request.VeterinarioAtualizacaoDTO;
 import com.backend.vetcare.dto.request.VeterinarioDTO;
-import com.backend.vetcare.dto.response.VeterinarioListDTO;
+import com.backend.vetcare.dto.response.VeterinarioResponseDTO;
+import com.backend.vetcare.exception.ConflitoException;
+import com.backend.vetcare.exception.RecursoNaoEncontradoException;
 import com.backend.vetcare.model.Veterinario;
 import com.backend.vetcare.repositories.VeterinarioRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import com.backend.vetcare.security.UsuarioAutenticado;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class VeterinarioService {
 
     private final VeterinarioRepository veterinarioRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UsuarioService usuarioService;
 
-    public VeterinarioService(VeterinarioRepository veterinarioRepository, PasswordEncoder passwordEncoder) {
+    public VeterinarioService(VeterinarioRepository veterinarioRepository, UsuarioService usuarioService) {
         this.veterinarioRepository = veterinarioRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.usuarioService = usuarioService;
     }
 
-    public Veterinario cadastrar(VeterinarioDTO dto) {
-        if (veterinarioRepository.existsByEmail(dto.getEmail())) {
-            throw new RuntimeException("Email já cadastrado.");
+    @Transactional
+    public VeterinarioResponseDTO cadastrar(VeterinarioDTO dto) {
+        String registro = dto.getRegistroProfissional().trim();
+        if (veterinarioRepository.existsByRegistroProfissional(registro)) {
+            throw new ConflitoException("Registro profissional já cadastrado.");
         }
 
-        if (veterinarioRepository.existsByCpf(dto.getCpf())) {
-            throw new RuntimeException("CPF já cadastrado.");
-        }
-
-        if (veterinarioRepository.existsByRegistroProfissional(dto.getRegistroProfissional())) {
-            throw new RuntimeException("Registro profissional já cadastrado.");
-        }
-
-        Veterinario veterinario = new Veterinario();
-        veterinario.setNome(dto.getNome());
-        veterinario.setCpf(dto.getCpf());
-        veterinario.setEmail(dto.getEmail());
-        veterinario.setTelefone(dto.getTelefone());
-        veterinario.setRegistroProfissional(dto.getRegistroProfissional());
-        veterinario.setEspecialidade(dto.getEspecialidade());
-        veterinario.setBiografia(dto.getBiografia());
-        veterinario.setValorConsulta(dto.getValorConsulta());
-        veterinario.setSenha(passwordEncoder.encode(dto.getSenha()));
-
-        return veterinarioRepository.save(veterinario);
+        Veterinario vet = usuarioService.preencherNovo(new Veterinario(), dto);
+        vet.setRegistroProfissional(registro);
+        vet.setBiografia(dto.getBiografia());
+        vet.setValorConsulta(dto.getValorConsulta());
+        return new VeterinarioResponseDTO(veterinarioRepository.save(vet));
     }
 
-    public Veterinario buscarPorId(Long id) {
+    /** ADMIN vê todos; os demais perfis veem apenas veterinários ativos. */
+    @Transactional(readOnly = true)
+    public List<VeterinarioResponseDTO> listar(UsuarioAutenticado logado) {
+        List<Veterinario> lista = logado.isAdmin()
+                ? veterinarioRepository.findAll()
+                : veterinarioRepository.findByAtivoTrue();
+        return lista.stream().map(VeterinarioResponseDTO::new).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public VeterinarioResponseDTO buscarPorId(Long id, UsuarioAutenticado logado) {
+        Veterinario vet = buscarEntidade(id);
+        if (!vet.isAtivo() && !logado.isAdmin() && !logado.isUsuario(id)) {
+            throw new RecursoNaoEncontradoException("Veterinário não encontrado.");
+        }
+        return new VeterinarioResponseDTO(vet);
+    }
+
+    @Transactional
+    public VeterinarioResponseDTO atualizar(Long id, VeterinarioAtualizacaoDTO dto, UsuarioAutenticado logado) {
+        UsuarioService.garantirProprioOuAdmin(id, logado);
+        Veterinario vet = buscarEntidade(id);
+        vet.setNome(dto.nome().trim());
+        vet.setTelefone(dto.telefone());
+        vet.setBiografia(dto.biografia());
+        vet.setValorConsulta(dto.valorConsulta());
+        return new VeterinarioResponseDTO(veterinarioRepository.save(vet));
+    }
+
+    private Veterinario buscarEntidade(Long id) {
         return veterinarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Veterinário não encontrado."));
-    }
-
-    public List<Veterinario> listarTodos() {
-        return veterinarioRepository.findAll();
-    }
-
-    public List<Veterinario> buscarPorEspecialidade(String especialidade) {
-        return veterinarioRepository.findByEspecialidadeContainingIgnoreCase(especialidade);
-    }
-
-    public List<VeterinarioListDTO> listarPorEspecialidade(String especialidade) {
-        return veterinarioRepository.findByEspecialidadeContainingIgnoreCase(especialidade).stream()
-                .map(VeterinarioListDTO::new)
-                .collect(Collectors.toList());
-    }
-
-    public List<VeterinarioListDTO> listarTodosFormatado() {
-        return veterinarioRepository.findAll().stream()
-                .map(VeterinarioListDTO::new)
-                .collect(Collectors.toList());
-    }
-
-    public Veterinario login(LoginDTO dto) {
-        Veterinario veterinario = veterinarioRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new RuntimeException("Veterinário não encontrado."));
-        if (!passwordEncoder.matches(dto.getSenha(), veterinario.getSenha())) {
-            throw new RuntimeException("Senha inválida.");
-        }
-        return veterinario;
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Veterinário não encontrado."));
     }
 }

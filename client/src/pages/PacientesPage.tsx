@@ -54,9 +54,9 @@ export const PacientesPage: React.FC<PacientesPageProps> = ({ tutores, onAddPetA
   const handleSalvarCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
     if (salvando) return;
-    if (!nomeAnimal.trim() || !especie) { onNotify('Preencha Nome e Espécie do animal.'); return; }
-    if (!tutorSelecionadoId && (!nomeTutor.trim() || !cpfTutor.trim() || !telefoneTutor.trim())) {
-      onNotify('Vínculo obrigatório: selecione um tutor ou preencha Nome, CPF e Telefone.');
+    if (!nomeAnimal.trim() || !especie || !sexo) { onNotify('Preencha Nome, Espécie e Sexo do animal.'); return; }
+    if (!tutorSelecionadoId && (!nomeTutor.trim() || !cpfTutor.trim() || !telefoneTutor.trim() || !emailTutor.trim())) {
+      onNotify('Vínculo obrigatório: selecione um tutor ou preencha Nome, CPF, Telefone e E-mail.');
       return;
     }
 
@@ -70,8 +70,8 @@ export const PacientesPage: React.FC<PacientesPageProps> = ({ tutores, onAddPetA
       }
       const pesoNum = parseFloat(pesoAtual.replace(',', '.')) || 0;
       const petSalvo = await cadastrarPetBackend({
-        nome: nomeAnimal.trim(), especie, raca: raca.trim() || 'SRD', sexo: sexo || 'Fêmea', dataNascimento,
-        peso: pesoNum, porte: porte || 'Médio', cor: corPelagem.trim(), observacoes: observacoes.trim(),
+        nome: nomeAnimal.trim(), especie, raca: raca.trim(), sexo, dataNascimento,
+        peso: pesoNum, porte, cor: corPelagem.trim(), observacoes: observacoes.trim(),
         tutorId: tutorIdFinal, tutorNome: tutorCriado?.nome ?? nomeTutor.trim(), tutorTelefone: tutorCriado?.telefone ?? telefoneTutor.trim(),
       });
       onAddPetAndTutor(petSalvo, tutorCriado);
@@ -123,7 +123,7 @@ export const PacientesPage: React.FC<PacientesPageProps> = ({ tutores, onAddPetA
                 <input type="text" className="form-input" placeholder="Ex.: Golden Retriever" value={raca} onChange={(e) => setRaca(e.target.value)} />
               </div>
               <div className="form-group">
-                <label className="form-label">Sexo</label>
+                <label className="form-label">Sexo *</label>
                 <select className="form-select" value={sexo} onChange={(e) => setSexo(e.target.value)}>
                   <option value="">Selecione</option>
                   <option value="Fêmea">Fêmea</option>
@@ -206,8 +206,8 @@ export const PacientesPage: React.FC<PacientesPageProps> = ({ tutores, onAddPetA
               <input type="text" className="form-input" placeholder="(00) 00000-0000" value={telefoneTutor} onChange={(e) => { setTutorSelecionadoId(null); setTelefoneTutor(e.target.value); }} required />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">E-mail</label>
-              <input type="email" className="form-input" placeholder="email@exemplo.com" value={emailTutor} onChange={(e) => { setTutorSelecionadoId(null); setEmailTutor(e.target.value); }} />
+              <label className="form-label">E-mail *</label>
+              <input type="email" className="form-input" placeholder="email@exemplo.com" value={emailTutor} onChange={(e) => { setTutorSelecionadoId(null); setEmailTutor(e.target.value); }} required />
             </div>
           </div>
         </div>

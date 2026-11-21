@@ -1,21 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Header } from './components/Header';
+import { Login } from './components/Login';
 import { Sidebar } from './components/Sidebar';
 import { AgendaPage } from './pages/AgendaPage';
 import { AtendimentoPage } from './pages/AtendimentoPage';
 import { FinanceiroPage } from './pages/FinanceiroPage';
 import { PacientesPage } from './pages/PacientesPage';
 import {
-  INITIAL_AGENDAMENTOS,
-  INITIAL_HISTORICO_CLINICO,
+  EVENTO_LOGOUT,
   INITIAL_PAGAMENTOS,
-  INITIAL_PETS,
-  INITIAL_TUTORES,
-  INITIAL_VETERINARIOS,
+  Sessao,
+  getSessao,
+  hojeLocalISO,
   listarConsultasBackend,
+  listarHistoricoBackend,
   listarPetsBackend,
   listarTutoresBackend,
   listarVeterinariosBackend,
+  logout,
 } from './services/api';
 import {
   AgendamentoItem,
@@ -28,19 +30,53 @@ import {
   Veterinario,
 } from './types/vetcare';
 
+/** Porta de entrada: sem sessão válida, só a tela de login é exibida. */
 export function App() {
+  const [sessao, setSessao] = useState<Sessao | null>(() => getSessao());
+
+  useEffect(() => {
+    const aoExpirar = () => setSessao(null);
+    window.addEventListener(EVENTO_LOGOUT, aoExpirar);
+    return () => window.removeEventListener(EVENTO_LOGOUT, aoExpirar);
+  }, []);
+
+  if (!sessao) {
+    return <Login onLogin={setSessao} />;
+  }
+
+  return (
+    <Painel
+      sessao={sessao}
+      onLogout={() => {
+        logout();
+        setSessao(null);
+      }}
+    />
+  );
+}
+
+interface PainelProps {
+  sessao: Sessao;
+  onLogout: () => void;
+}
+
+function Painel({ sessao, onLogout }: PainelProps) {
+  // O perfil vem do token (cargo), nunca de um seletor na tela.
+  const perfil: PerfilUsuario =
+    sessao.usuario.cargo === 'ADMIN' ? 'ADMIN' : sessao.usuario.cargo === 'RECEPCIONISTA' ? 'RECEPCIONISTA' : 'VETERINARIO';
+
   const [activeTab, setActiveTab] = useState<ScreenTab>('agenda');
-  const [perfil, setPerfil] = useState<PerfilUsuario>('ADMIN');
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
 
-  const [tutores, setTutores] = useState<Tutor[]>(INITIAL_TUTORES);
-  const [pets, setPets] = useState<Pet[]>(INITIAL_PETS);
-  const [veterinarios, setVeterinarios] = useState<Veterinario[]>(INITIAL_VETERINARIOS);
-  const [agendamentos, setAgendamentos] = useState<AgendamentoItem[]>(INITIAL_AGENDAMENTOS);
-  const [historico, setHistorico] = useState<ProntuarioRegistro[]>(INITIAL_HISTORICO_CLINICO);
-  const [pagamentos, setPagamentos] = useState<PagamentoItem[]>(INITIAL_PAGAMENTOS);
-  const [selectedPetId, setSelectedPetId] = useState<number>(1);
+  const [tutores, setTutores] = useState<Tutor[]>([]);
+  const [pets, setPets] = useState<Pet[]>([]);
+  const [veterinarios, setVeterinarios] = useState<Veterinario[]>([]);
+  const [agendamentos, setAgendamentos] = useState<AgendamentoItem[]>([]);
+  const [historico, setHistorico] = useState<ProntuarioRegistro[]>([]);
+  const [pagamentos, setPagamentos] = useState<PagamentoItem[]>(INITIAL_PAGAMENTOS); // ainda sem API
+  const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -49,28 +85,32 @@ export function App() {
     }, 4000);
   };
 
-  useEffect(() => {
-    async function sincronizarBackend() {
-      try {
-        const [tutoresApi, petsApi, vetsApi, consultasApi] = await Promise.all([
-          listarTutoresBackend(),
-          listarPetsBackend(),
-          listarVeterinariosBackend(),
-          listarConsultasBackend(),
-        ]);
-        if (tutoresApi.length > 0) setTutores(tutoresApi);
-        if (petsApi.length > 0) {
-          setPets(petsApi);
-          setSelectedPetId(petsApi[0].id);
-        }
-        if (vetsApi.length > 0) setVeterinarios(vetsApi);
-        if (consultasApi.length > 0) setAgendamentos(consultasApi);
-      } catch {
-        // Mantém fallback local caso o back-end esteja offline
-      }
+  const sincronizarBackend = useCallback(async () => {
+    try {
+      const [tutoresApi, petsApi, vetsApi, consultasApi, historicoApi] = await Promise.all([
+        listarTutoresBackend(),
+        listarPetsBackend(),
+        listarVeterinariosBackend(),
+        listarConsultasBackend(),
+        // a recepção não acessa dados clínicos
+        perfil === 'RECEPCIONISTA' ? Promise.resolve<ProntuarioRegistro[]>([]) : listarHistoricoBackend(),
+      ]);
+      setTutores(tutoresApi);
+      setPets(petsApi);
+      setVeterinarios(vetsApi);
+      setAgendamentos(consultasApi);
+      setHistorico(historicoApi);
+      setSelectedPetId((atual) => (atual !== null && petsApi.some((p) => p.id === atual) ? atual : petsApi[0]?.id ?? null));
+      setErroCarga(null);
+    } catch (err: any) {
+      // Sem fallback para dados fictícios: o usuário precisa saber que a carga falhou.
+      setErroCarga(err?.message || 'Não foi possível carregar os dados do servidor.');
     }
+  }, [perfil]);
+
+  useEffect(() => {
     sincronizarBackend();
-  }, []);
+  }, [sincronizarBackend]);
 
   const screenHeaders: Record<ScreenTab, { title: string; subtitle: string }> = {
     agenda: { title: 'Agenda', subtitle: 'Organize os atendimentos da clínica' },
@@ -80,9 +120,12 @@ export function App() {
   };
 
   const selectedPet = pets.find((p) => p.id === selectedPetId) ?? pets[0];
-  const agendamentoDoPet = agendamentos.find(
-    (a) => a.petId === selectedPet?.id && a.status !== 'CANCELADA'
-  );
+
+  // Consulta de hoje ainda pendente para o pet selecionado (a mais cedo primeiro)
+  const hoje = hojeLocalISO();
+  const agendamentoDoPet = agendamentos
+    .filter((a) => a.petId === selectedPet?.id && a.status === 'CONFIRMADA' && a.data === hoje)
+    .sort((a, b) => a.horario.localeCompare(b.horario))[0];
 
   return (
     <div className="app-shell">
@@ -90,16 +133,8 @@ export function App() {
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         perfil={perfil}
-        onChangePerfil={(novoPerfil) => {
-          setPerfil(novoPerfil);
-          if (novoPerfil === 'RECEPCIONISTA' && activeTab === 'atendimento') {
-            setActiveTab('agenda');
-          }
-          if (novoPerfil === 'VETERINARIO' && activeTab === 'financeiro') {
-            setActiveTab('agenda');
-          }
-          showToast(`Perfil ativo alterado para: ${novoPerfil}`);
-        }}
+        usuario={sessao.usuario}
+        onLogout={onLogout}
       />
 
       <div className="main-area">
@@ -109,6 +144,17 @@ export function App() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
+
+        {erroCarga && (
+          <div
+            role="alert"
+            className="info-banner-teal"
+            style={{ background: '#fef2f2', color: '#b91c1c', borderColor: '#fecaca', display: 'flex', justifyContent: 'space-between', gap: '12px' }}
+          >
+            <span>{erroCarga}</span>
+            <button type="button" className="btn-secondary" onClick={sincronizarBackend}>Tentar novamente</button>
+          </div>
+        )}
 
         {activeTab === 'agenda' && (
           <AgendaPage
@@ -136,11 +182,19 @@ export function App() {
 
         {activeTab === 'atendimento' && selectedPet && (
           <AtendimentoPage
+            key={selectedPet.id}
             pet={selectedPet}
             agendamentoAtivo={agendamentoDoPet}
-            historico={historico.filter((h) => h.petId === selectedPet.id || h.petId === 1)}
+            historico={historico.filter((h) => h.petId === selectedPet.id)}
             onSaveProntuarioVersion={(novoReg) => {
+              // anotações locais (ex.: vacina) — ainda sem endpoint no servidor
               setHistorico((prev) => [{ ...novoReg, id: Date.now() }, ...prev]);
+            }}
+            onConsultaFinalizada={(consultaId, registro) => {
+              setAgendamentos((prev) =>
+                prev.map((a) => (a.id === consultaId ? { ...a, status: 'REALIZADA' } : a))
+              );
+              setHistorico((prev) => [registro, ...prev.filter((h) => h.id !== registro.id)]);
             }}
             onNotify={showToast}
           />
@@ -161,14 +215,19 @@ export function App() {
         )}
 
         {activeTab === 'financeiro' && (
-          <FinanceiroPage
-            pagamentos={pagamentos}
-            pets={pets}
-            onAddPagamento={(novo) => {
-              setPagamentos((prev) => [{ ...novo, id: prev.length + 10 }, ...prev]);
-              showToast('Pagamento registrado com sucesso!');
-            }}
-          />
+          <>
+            <div className="info-banner-teal">
+              Dados de exemplo: o módulo financeiro ainda não está integrado ao servidor.
+            </div>
+            <FinanceiroPage
+              pagamentos={pagamentos}
+              pets={pets}
+              onAddPagamento={(novo) => {
+                setPagamentos((prev) => [{ ...novo, id: prev.length + 10 }, ...prev]);
+                showToast('Pagamento registrado com sucesso!');
+              }}
+            />
+          </>
         )}
       </div>
 

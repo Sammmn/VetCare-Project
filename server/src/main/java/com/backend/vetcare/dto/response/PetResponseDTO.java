@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 import java.time.LocalDate;
 
 @Getter
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PetResponseDTO {
+
     private Long id;
     private String nome;
     private String especie;

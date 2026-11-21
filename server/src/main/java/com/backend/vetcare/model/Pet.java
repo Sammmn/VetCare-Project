@@ -40,7 +40,7 @@ public class Pet {
     @Column(columnDefinition = "TEXT")
     private String observacoes;
 
-    @ManyToOne
+    @ManyToOne(optional = false)
     @JoinColumn(name = "tutor_id")
     private Tutor tutor;
 }

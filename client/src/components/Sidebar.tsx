@@ -1,19 +1,22 @@
 import React from 'react';
-import { Calendar, ClipboardList, PawPrint, Wallet } from 'lucide-react';
+import { Calendar, ClipboardList, LogOut, PawPrint, Wallet } from 'lucide-react';
 import { PerfilUsuario, ScreenTab } from '../types/vetcare';
+import { UsuarioLogado } from '../services/api';
 
 interface SidebarProps {
   activeTab: ScreenTab;
   onSelectTab: (tab: ScreenTab) => void;
   perfil: PerfilUsuario;
-  onChangePerfil: (perfil: PerfilUsuario) => void;
+  usuario: UsuarioLogado;
+  onLogout: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
   perfil,
-  onChangePerfil,
+  usuario,
+  onLogout,
 }) => {
   const navItems: { id: ScreenTab; label: string; icon: React.ReactNode; perfis: PerfilUsuario[] }[] = [
     {
@@ -42,13 +45,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
-  const perfilInfo: Record<PerfilUsuario, { initials: string; nome: string; cargo: string }> = {
-    ADMIN: { initials: 'AS', nome: 'Ana Souza', cargo: 'Administradora' },
-    RECEPCIONISTA: { initials: 'MC', nome: 'Mariana Costa', cargo: 'Recepcionista' },
-    VETERINARIO: { initials: 'CA', nome: 'Dra. Camila', cargo: 'Veterinária' },
+  const cargoLabel: Record<string, string> = {
+    ADMIN: 'Administração',
+    RECEPCIONISTA: 'Recepção',
+    VETERINARIO: 'Veterinário(a)',
   };
-
-  const currentUser = perfilInfo[perfil];
+  const initials = usuario.nome
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((parte) => parte[0].toUpperCase())
+    .join('');
 
   return (
     <aside className="sidebar">
@@ -83,27 +90,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <div className="user-card">
         <div className="user-card-top">
-          <div className="user-avatar">{currentUser.initials}</div>
+          <div className="user-avatar">{initials}</div>
           <div>
-            <div className="user-name">{currentUser.nome}</div>
-            <div className="user-role">{currentUser.cargo}</div>
+            <div className="user-name">{usuario.nome}</div>
+            <div className="user-role">{cargoLabel[usuario.cargo] ?? usuario.cargo}</div>
           </div>
         </div>
-        <button
-          type="button"
-          className="user-settings-btn"
-          title="Alternar perfil RBAC (Admin / Recepcionista / Veterinário)"
-          onClick={() => {
-            const next: Record<PerfilUsuario, PerfilUsuario> = {
-              ADMIN: 'VETERINARIO',
-              VETERINARIO: 'RECEPCIONISTA',
-              RECEPCIONISTA: 'ADMIN',
-            };
-            const novoPerfil = next[perfil];
-            onChangePerfil(novoPerfil);
-          }}
-        >
-          Configurações da conta
+        <button type="button" className="user-settings-btn" onClick={onLogout}>
+          <LogOut size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+          Sair
         </button>
       </div>
     </aside>

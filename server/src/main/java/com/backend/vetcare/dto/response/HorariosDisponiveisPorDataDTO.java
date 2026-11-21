@@ -1,5 +1,6 @@
 package com.backend.vetcare.dto.response;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -10,13 +11,10 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 public class HorariosDisponiveisPorDataDTO {
 
+    private Long veterinarioId;
     private LocalDate data;
     private List<HorarioDisponivelDTO> horarios;
-
-    public HorariosDisponiveisPorDataDTO(LocalDate data, List<HorarioDisponivelDTO> horarios) {
-        this.data = data;
-        this.horarios = horarios;
-    }
 }

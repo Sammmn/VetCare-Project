@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { AgendamentoItem, Pet, Veterinario } from '../types/vetcare';
-import { agendarConsultaBackend, cancelarConsultaBackend } from '../services/api';
+import { agendarConsultaBackend, cancelarConsultaBackend, hojeLocalISO } from '../services/api';
 
 interface AgendaPageProps {
   agendamentos: AgendamentoItem[];
@@ -36,8 +36,10 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({
     if (veterinarios.length > 0 && !veterinarios.some((v) => v.id === novoVetId)) setNovoVetId(veterinarios[0].id);
   }, [veterinarios, novoVetId]);
 
+  const hoje = hojeLocalISO();
   const filteredAgendamentos = agendamentos.filter((item) => {
     if (item.status === 'CANCELADA') return false;
+    if (item.data !== hoje) return false; // esta grade mostra apenas o dia de hoje
     if (selectedVetFilter !== 'ALL' && item.veterinarioId !== selectedVetFilter) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -45,7 +47,7 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({
   });
 
   const findSlotAppointment = (slotHour: string, vetId: number) =>
-    filteredAgendamentos.find((a) => a.veterinarioId === vetId && a.horario.startsWith(slotHour.slice(0, 2)));
+    filteredAgendamentos.find((a) => a.veterinarioId === vetId && a.horario.startsWith(slotHour));
 
   const handleOpenNewModal = (defaultTime = '13:00') => {
     setNovoHorario(defaultTime);
@@ -63,8 +65,7 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({
       return;
     }
     try {
-      const hoje = new Date().toISOString().slice(0, 10);
-      const salvo = await agendarConsultaBackend({ petId: petObj.id, veterinarioId: vetObj.id, data: hoje, horario: novoHorario, observacoes: novoTipo });
+      const salvo = await agendarConsultaBackend({ petId: petObj.id, tutorId: petObj.tutorId, veterinarioId: vetObj.id, data: hojeLocalISO(), horario: novoHorario, observacoes: novoTipo });
       onAddAgendamento(salvo);
       setModalOpen(false);
     } catch (err: any) {
@@ -112,46 +113,50 @@ export const AgendaPage: React.FC<AgendaPageProps> = ({
       </div>
 
       <div className="agenda-grid-layout">
-        <div className="card schedule-table-card">
-          <div className="schedule-header-row">
-            <div />
-            {veterinarios.slice(0, 2).map((vet) => (<div key={vet.id} className="schedule-col-header"><div className="vet-col-name">{vet.nome}</div><div className="vet-col-spec">{vet.especialidade}</div></div>))}
-          </div>
+        <div className="card schedule-table-card" style={{ overflowX: 'auto' }}>
+          <div style={{ minWidth: `${76 + Math.max(veterinarios.length, 1) * 240}px` }}>
+            <div
+              className="schedule-header-row"
+              style={{ gridTemplateColumns: `76px repeat(${Math.max(veterinarios.length, 1)}, minmax(240px, 1fr))` }}
+            >
+              <div />
+              {veterinarios.map((vet) => (<div key={vet.id} className="schedule-col-header"><div className="vet-col-name">{vet.nome}</div><div className="vet-col-spec">{vet.especialidade}</div></div>))}
+            </div>
 
-          {TIME_SLOTS.map((slot) => {
-            const vet1 = veterinarios[0];
-            const vet2 = veterinarios[1];
-            const appt1 = vet1 ? findSlotAppointment(slot, vet1.id) : undefined;
-            const appt2 = vet2 ? findSlotAppointment(slot, vet2.id) : undefined;
+            {TIME_SLOTS.map((slot) => {
+              const slotAppts = veterinarios.map((vet) => findSlotAppointment(slot, vet.id));
+              const hasAnyAppt = slotAppts.some(Boolean);
+              const gridStyle = { gridTemplateColumns: `76px repeat(${Math.max(veterinarios.length, 1)}, minmax(240px, 1fr))` };
 
-            if (slot === '13:00' && !appt1 && !appt2) {
+              if (slot === '13:00' && !hasAnyAppt) {
+                return (
+                  <div key={slot} className="schedule-row" style={gridStyle}>
+                    <div className="schedule-time-cell">{slot}</div>
+                    <div className="schedule-slot-span" style={{ gridColumn: '2 / -1' }}><button type="button" className="available-pill-btn" onClick={() => handleOpenNewModal('13:00')}>Horário disponível · clique para agendar</button></div>
+                  </div>
+                );
+              }
+
               return (
-                <div key={slot} className="schedule-row">
+                <div key={slot} className="schedule-row" style={gridStyle}>
                   <div className="schedule-time-cell">{slot}</div>
-                  <div className="schedule-slot-span"><button type="button" className="available-pill-btn" onClick={() => handleOpenNewModal('13:00')}>Horário disponível · clique para agendar</button></div>
+                  {slotAppts.map((appt, i) => (
+                    <div key={veterinarios[i]?.id ?? i} className="schedule-slot-cell">
+                      {appt && (
+                        <div className={`appt-card ${appt.cor}`} onClick={() => onOpenAtendimento(appt.petId)} title="Clique para abrir o prontuário">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div className="appt-title">{appt.horario} · {appt.petNome}</div>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleCancelar(appt); }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b', padding: '2px' }} title="Cancelar consulta"><X size={13} /></button>
+                          </div>
+                          <div className="appt-sub">{appt.tipo}</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               );
-            }
-
-            return (
-              <div key={slot} className="schedule-row">
-                <div className="schedule-time-cell">{slot}</div>
-                {[appt1, appt2].map((appt, i) => (
-                  <div key={i} className="schedule-slot-cell">
-                    {appt && (
-                      <div className={`appt-card ${appt.cor}`} onClick={() => onOpenAtendimento(appt.petId)} title="Clique para abrir o prontuário">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div className="appt-title">{appt.horario} · {appt.petNome}</div>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); handleCancelar(appt); }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b', padding: '2px' }} title="Cancelar consulta"><X size={13} /></button>
-                        </div>
-                        <div className="appt-sub">{appt.tipo}</div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            );
-          })}
+            })}
+          </div>
         </div>
 
         <div className="side-widgets-col">

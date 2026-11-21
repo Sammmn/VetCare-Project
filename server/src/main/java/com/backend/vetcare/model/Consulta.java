@@ -22,19 +22,31 @@ public class Consulta {
     @Enumerated(EnumType.STRING)
     private StatusConsulta status = StatusConsulta.AGENDADA;
 
+    @Column(length = 500)
+    private String motivo;
+
+    @Column(length = 500)
+    private String motivoCancelamento;
+
+    @Column(columnDefinition = "TEXT")
     private String diagnostico;
 
+    @Column(columnDefinition = "TEXT")
     private String prescricao;
 
     @Column(columnDefinition = "TEXT")
     private String observacoes;
 
-    @ManyToOne
-    private Pet pet;
-
-    @ManyToOne
+    @ManyToOne(optional = false)
     private Tutor tutor;
 
-    @ManyToOne
+    @ManyToOne(optional = false)
+    private Pet pet;
+
+    @ManyToOne(optional = false)
     private Veterinario veterinario;
+
+    /** Horário da agenda reservado por esta consulta. */
+    @ManyToOne
+    private Agenda agenda;
 }

@@ -11,14 +11,12 @@ import java.math.BigDecimal;
 public class VeterinarioResponseDTO extends UsuarioResponseDTO {
 
     private String registroProfissional;
-    private String especialidade;
     private String biografia;
     private BigDecimal valorConsulta;
 
     public VeterinarioResponseDTO(Veterinario veterinario) {
         super(veterinario);
         this.registroProfissional = veterinario.getRegistroProfissional();
-        this.especialidade = veterinario.getEspecialidade();
         this.biografia = veterinario.getBiografia();
         this.valorConsulta = veterinario.getValorConsulta();
     }

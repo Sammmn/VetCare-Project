@@ -1,6 +1,6 @@
 package com.backend.vetcare.dto.request;
 
-//import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,7 +8,7 @@ import lombok.Setter;
 @Setter
 public class RegistroAtendimentoDTO {
 
-    //@NotBlank(message = "O diagnóstico é obrigatório.")
+    @NotBlank(message = "O diagnóstico é obrigatório.")
     private String diagnostico;
 
     private String prescricao;

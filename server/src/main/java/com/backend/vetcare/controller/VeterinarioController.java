@@ -1,20 +1,22 @@
 package com.backend.vetcare.controller;
 
-import com.backend.vetcare.dto.request.LoginDTO;
+import com.backend.vetcare.dto.request.VeterinarioAtualizacaoDTO;
 import com.backend.vetcare.dto.request.VeterinarioDTO;
-import com.backend.vetcare.dto.response.VeterinarioListDTO;
 import com.backend.vetcare.dto.response.VeterinarioResponseDTO;
-import com.backend.vetcare.model.Veterinario;
+import com.backend.vetcare.security.UsuarioAutenticado;
 import com.backend.vetcare.service.VeterinarioService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/medicos")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
+@RequestMapping("/api/veterinarios")
 public class VeterinarioController {
 
     private final VeterinarioService veterinarioService;
@@ -24,33 +26,27 @@ public class VeterinarioController {
     }
 
     @PostMapping
-    public ResponseEntity<Veterinario> cadastrar(@RequestBody VeterinarioDTO dto) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<VeterinarioResponseDTO> cadastrar(@RequestBody @Valid VeterinarioDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(veterinarioService.cadastrar(dto));
     }
 
+    @GetMapping
+    public ResponseEntity<List<VeterinarioResponseDTO>> listar(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(veterinarioService.listar(UsuarioAutenticado.from(jwt)));
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<Veterinario> buscarPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(veterinarioService.buscarPorId(id));
+    public ResponseEntity<VeterinarioResponseDTO> buscarPorId(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(veterinarioService.buscarPorId(id, UsuarioAutenticado.from(jwt)));
     }
 
-    @GetMapping("/lista/todos")
-    public ResponseEntity<List<VeterinarioListDTO>> listarTodos() {
-        return ResponseEntity.ok(veterinarioService.listarTodosFormatado());
-    }
-
-    @GetMapping("/lista/especialidade/{especialidade}")
-    public ResponseEntity<List<VeterinarioListDTO>> listarPorEspecialidade(@PathVariable String especialidade) {
-        return ResponseEntity.ok(veterinarioService.listarPorEspecialidade(especialidade));
-    }
-
-    @GetMapping("/especialidade/{especialidade}")
-    public ResponseEntity<List<Veterinario>> buscarPorEspecialidade(@PathVariable String especialidade) {
-        return ResponseEntity.ok(veterinarioService.buscarPorEspecialidade(especialidade));
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<VeterinarioResponseDTO> login(@RequestBody LoginDTO dto) {
-        Veterinario veterinario = veterinarioService.login(dto);
-        return ResponseEntity.ok(new VeterinarioResponseDTO(veterinario));
+    /** ADMIN ou o próprio veterinário. */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','VETERINARIO')")
+    public ResponseEntity<VeterinarioResponseDTO> atualizar(@PathVariable Long id,
+                                                            @RequestBody @Valid VeterinarioAtualizacaoDTO dto,
+                                                            @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(veterinarioService.atualizar(id, dto, UsuarioAutenticado.from(jwt)));
     }
 }

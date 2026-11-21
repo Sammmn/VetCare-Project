@@ -1,6 +1,6 @@
 package com.backend.vetcare.dto.response;
 
-
+import com.backend.vetcare.model.Cargo;
 import com.backend.vetcare.model.Usuario;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,11 +13,15 @@ public class UsuarioResponseDTO {
     private String nome;
     private String email;
     private String telefone;
+    private Cargo cargo;
+    private boolean ativo;
 
     public UsuarioResponseDTO(Usuario usuario) {
         this.id = usuario.getId();
         this.nome = usuario.getNome();
         this.email = usuario.getEmail();
         this.telefone = usuario.getTelefone();
+        this.cargo = usuario.getCargo();
+        this.ativo = usuario.isAtivo();
     }
 }

@@ -35,3 +35,5 @@ build/
 
 node_modules/
 vetcare-codigo.txt
+
+client/dist/

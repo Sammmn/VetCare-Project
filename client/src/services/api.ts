@@ -1,57 +1,116 @@
 import { AgendamentoItem, PagamentoItem, Pet, ProntuarioRegistro, Tutor, Veterinario } from '../types/vetcare';
 
-const API_BASE_URL = 'http://localhost:8080';
+// Em desenvolvimento o Vite faz proxy de /api -> http://localhost:8080 (ver vite.config.ts).
+// Em produção, defina VITE_API_URL (ex.: https://api.suaclinica.com/api).
+const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? '/api';
 
-export const INITIAL_TUTORES: Tutor[] = [
-  { id: 1, nome: 'Marina Lima', cpf: '123.456.789-00', telefone: '(11) 98765-4321', email: 'marina.lima@email.com' },
-  { id: 2, nome: 'Pedro Alves', cpf: '234.567.890-11', telefone: '(11) 97654-3210', email: 'pedro.alves@email.com' },
-  { id: 3, nome: 'Carla Dias', cpf: '345.678.901-22', telefone: '(11) 96543-2109', email: 'carla.dias@email.com' },
-  { id: 4, nome: 'Lucas Mendes', cpf: '456.789.012-33', telefone: '(11) 95432-1098', email: 'lucas.mendes@email.com' },
-];
+// ---------------------------------------------------------------- sessão (JWT do usuário logado)
 
-export const INITIAL_PETS: Pet[] = [
-  { id: 1, nome: 'Mel', especie: 'Felino', raca: 'SRD', sexo: 'Fêmea', dataNascimento: '2021-05-10', idade: 4, peso: 4.2, porte: 'Pequeno', cor: 'Amarelo / Branco', observacoes: 'Sem alergias conhecidas.', tutorId: 1, tutorNome: 'Marina Lima', tutorTelefone: '(11) 98765-4321' },
-  { id: 2, nome: 'Thor', especie: 'Canino', raca: 'Golden Retriever', sexo: 'Macho', dataNascimento: '2022-02-14', idade: 3, peso: 28.5, porte: 'Grande', cor: 'Dourado', observacoes: 'Carteira vacinal em atualização.', tutorId: 2, tutorNome: 'Pedro Alves', tutorTelefone: '(11) 97654-3210' },
-  { id: 3, nome: 'Luna', especie: 'Felino', raca: 'Siamês', sexo: 'Fêmea', dataNascimento: '2023-08-20', idade: 2, peso: 3.6, porte: 'Pequeno', cor: 'Creme com pontas escuras', observacoes: 'Acompanhamento de retorno.', tutorId: 3, tutorNome: 'Carla Dias', tutorTelefone: '(11) 96543-2109' },
-  { id: 4, nome: 'Simba', especie: 'Canino', raca: 'Bulldog Francês', sexo: 'Macho', dataNascimento: '2020-11-03', idade: 5, peso: 12.0, porte: 'Médio', cor: 'Tigrado', observacoes: 'Histórico de dermatite alérgica.', tutorId: 4, tutorNome: 'Lucas Mendes', tutorTelefone: '(11) 95432-1098' },
-];
+export type CargoUsuario = 'ADMIN' | 'VETERINARIO' | 'TUTOR' | 'RECEPCIONISTA';
 
-export const INITIAL_VETERINARIOS: Veterinario[] = [
-  { id: 1, nome: 'Dra. Camila', especialidade: 'Clínica geral', registroProfissional: 'CRMV-SP 41250', valorConsulta: 180 },
-  { id: 2, nome: 'Dr. Rafael', especialidade: 'Dermatologia', registroProfissional: 'CRMV-SP 38910', valorConsulta: 220 },
-];
+export interface UsuarioLogado {
+  id: number;
+  nome: string;
+  email: string;
+  cargo: CargoUsuario;
+}
 
-export const INITIAL_AGENDAMENTOS: AgendamentoItem[] = [
-  { id: 1, horario: '08:00', petId: 1, petNome: 'Mel', tutorId: 1, tutorNome: 'Marina Lima', veterinarioId: 1, veterinarioNome: 'Dra. Camila', tipo: 'Consulta de rotina', status: 'CONFIRMADA', cor: 'amber', data: new Date().toISOString().slice(0, 10) },
-  { id: 2, horario: '09:30', petId: 2, petNome: 'Thor', tutorId: 2, tutorNome: 'Pedro Alves', veterinarioId: 2, veterinarioNome: 'Dr. Rafael', tipo: 'Vacinação', status: 'CONFIRMADA', cor: 'blue', data: new Date().toISOString().slice(0, 10) },
-  { id: 3, horario: '11:00', petId: 3, petNome: 'Luna', tutorId: 3, tutorNome: 'Carla Dias', veterinarioId: 1, veterinarioNome: 'Dra. Camila', tipo: 'Retorno', status: 'CONFIRMADA', cor: 'purple', data: new Date().toISOString().slice(0, 10) },
-  { id: 4, horario: '14:30', petId: 4, petNome: 'Simba', tutorId: 4, tutorNome: 'Lucas Mendes', veterinarioId: 2, veterinarioNome: 'Dr. Rafael', tipo: 'Exame dermatológico', status: 'A_CONFIRMAR', cor: 'rose', data: new Date().toISOString().slice(0, 10) },
-];
+export interface Sessao {
+  token: string;
+  usuario: UsuarioLogado;
+  expiraEm: number; // epoch ms
+}
 
-export const INITIAL_HISTORICO_CLINICO: ProntuarioRegistro[] = [
-  {
-    id: 101, petId: 1, data: '18 JUN 2025', titulo: 'Consulta atual', veterinarioNome: 'Dra. Camila', versao: 'versão 1.0', atual: true,
-    queixaPrincipal: 'Falta de apetite e comportamento apático há dois dias.',
-    historicoEvolucao: 'Tutora relata que Mel reduziu a ingestão de alimento desde segunda-feira.',
-    alimentacao: 'Reduzida', ingestaoAgua: 'Normal', temperatura: '38,7', frequenciaCardiaca: '160', peso: '4,2',
-    achadosExameFisico: 'Mucosas normocoradas, TPC < 2s, hidratação adequada.',
-    diagnosticoPresuntivo: 'Gastrite aguda / corpo estranho linear a descartar',
-    examesSolicitados: 'Hemograma completo e ultrassonografia abdominal.',
-    prescricaoTratamento: 'Citrato de maropitant 1mg/kg SC em dose única.',
-    orientacoesRetorno: 'Retorno em 48 horas.',
-  },
-];
+const SESSION_KEY = 'vetcare.sessao';
+export const EVENTO_LOGOUT = 'vetcare:logout';
 
-export const INITIAL_PAGAMENTOS: PagamentoItem[] = [
-  { id: 1, pacienteNome: 'Mel', tutorNome: 'Marina Lima', servico: 'Consulta', categoria: 'Consultas', forma: 'Cartão', status: 'Pago', valor: 180.0, data: '18/06/2025' },
-  { id: 2, pacienteNome: 'Thor', tutorNome: 'Pedro Alves', servico: 'Vacinação', categoria: 'Vacinas', forma: 'PIX', status: 'Pago', valor: 145.0, data: '18/06/2025' },
-  { id: 3, pacienteNome: 'Luna', tutorNome: 'Carla Dias', servico: 'Consulta + exame', categoria: 'Procedimentos', forma: 'Dinheiro', status: 'Pendente', valor: 390.0, data: '18/06/2025' },
-];
+export function getSessao(): Sessao | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const sessao = JSON.parse(raw) as Sessao;
+    if (!sessao.token || Date.now() >= sessao.expiraEm) {
+      sessionStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return sessao;
+  } catch {
+    return null;
+  }
+}
 
+export function logout(): void {
+  sessionStorage.removeItem(SESSION_KEY);
+}
+
+export async function login(email: string, senha: string): Promise<Sessao> {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim(), senha }),
+  });
+  if (!response.ok) await parseApiError(response, 'Não foi possível entrar. Verifique se o servidor está ativo.');
+
+  const data = await response.json();
+  const cargo = data.usuario?.cargo as CargoUsuario;
+  if (cargo === 'TUTOR') {
+    throw new Error('Este sistema é de uso exclusivo da equipe da clínica.');
+  }
+
+  const sessao: Sessao = {
+    token: data.token,
+    expiraEm: Date.now() + Number(data.expiraEmSegundos ?? 0) * 1000,
+    usuario: { id: data.usuario.id, nome: data.usuario.nome, email: data.usuario.email, cargo },
+  };
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
+  return sessao;
+}
+
+async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+  const sessao = getSessao();
+  if (!sessao) {
+    window.dispatchEvent(new Event(EVENTO_LOGOUT));
+    throw new Error('Sessão expirada. Faça login novamente.');
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+      Authorization: `Bearer ${sessao.token}`,
+    },
+  });
+
+  if (response.status === 401) {
+    logout();
+    window.dispatchEvent(new Event(EVENTO_LOGOUT));
+    throw new Error('Sessão expirada. Faça login novamente.');
+  }
+  return response;
+}
+
+/** O backend responde { mensagem, campos: { campo: erro } }. */
 async function parseApiError(response: Response, fallback: string): Promise<never> {
   let msg = fallback;
-  try { const data = await response.json(); if (data?.message) msg = data.message; } catch {}
+  try {
+    const data = await response.json();
+    const campos = data?.campos && typeof data.campos === 'object' ? Object.values(data.campos) : [];
+    if (campos.length > 0) msg = campos.join(' | ');
+    else if (data?.mensagem) msg = data.mensagem;
+  } catch {
+    // corpo vazio ou não-JSON: mantém a mensagem padrão
+  }
   throw new Error(msg);
+}
+
+// ---------------------------------------------------------------- utilitários
+
+/** Data de hoje no fuso LOCAL (toISOString() usaria UTC e viraria o dia após as 21h no Brasil). */
+export function hojeLocalISO(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 export function normalizarDataISO(data?: string): string | null {
@@ -61,101 +120,211 @@ export function normalizarDataISO(data?: string): string | null {
   const br = limpa.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   return br ? `${br[3]}-${br[2]}-${br[1]}` : null;
 }
+
+function senhaAleatoria(): string {
+  const bytes = new Uint8Array(18);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes)) + 'aA1!';
+}
+
+// ---------------------------------------------------------------- dados de exemplo (Financeiro ainda não tem API)
+
+export const INITIAL_PAGAMENTOS: PagamentoItem[] = [
+  { id: 1, pacienteNome: 'Mel', tutorNome: 'Marina Lima', servico: 'Consulta', categoria: 'Consultas', forma: 'Cartão', status: 'Pago', valor: 180.0, data: '18/06/2025' },
+  { id: 2, pacienteNome: 'Thor', tutorNome: 'Pedro Alves', servico: 'Vacinação', categoria: 'Vacinas', forma: 'PIX', status: 'Pago', valor: 145.0, data: '18/06/2025' },
+  { id: 3, pacienteNome: 'Luna', tutorNome: 'Carla Dias', servico: 'Consulta + exame', categoria: 'Procedimentos', forma: 'Dinheiro', status: 'Pendente', valor: 390.0, data: '18/06/2025' },
+];
+
+// ---------------------------------------------------------------- tutores
+
 export async function listarTutoresBackend(): Promise<Tutor[]> {
-  const response = await fetch(`${API_BASE_URL}/tutores/lista/todos`);
+  const response = await apiFetch('/tutores');
   if (!response.ok) await parseApiError(response, 'Erro ao carregar tutores.');
   const lista = await response.json();
-  return lista.map((t: any) => ({ id: t.id, nome: t.nome ?? '', cpf: t.cpf ?? '', telefone: t.telefone ?? '', email: t.email ?? '' }));
+  return lista.map((t: any) => ({
+    id: t.id, nome: t.nome ?? '', cpf: t.cpf ?? '', telefone: t.telefone ?? '', email: t.email ?? '',
+  }));
 }
 
 export async function cadastrarTutorBackend(tutor: Omit<Tutor, 'id'>): Promise<Tutor> {
-  const response = await fetch(`${API_BASE_URL}/tutores`, {
+  if (!tutor.email?.trim()) throw new Error('Informe o e-mail do tutor.');
+
+  // A senha é aleatória e não é exibida: o tutor ainda não acessa o sistema.
+  // Quando existir um fluxo de "definir/recuperar senha", ele será usado no primeiro acesso.
+  const response = await apiFetch('/tutores', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nome: tutor.nome, cpf: tutor.cpf, telefone: tutor.telefone, email: tutor.email?.trim() || null }),
+    body: JSON.stringify({
+      nome: tutor.nome,
+      cpf: tutor.cpf,
+      telefone: tutor.telefone,
+      email: tutor.email.trim(),
+      senha: senhaAleatoria(),
+    }),
   });
   if (!response.ok) await parseApiError(response, 'Erro ao cadastrar tutor.');
   const salvo = await response.json();
-  return { id: salvo.id, nome: salvo.nome ?? tutor.nome, cpf: salvo.cpf ?? tutor.cpf, telefone: salvo.telefone ?? tutor.telefone, email: salvo.email ?? tutor.email };
+  return {
+    id: salvo.id, nome: salvo.nome ?? tutor.nome, cpf: salvo.cpf ?? tutor.cpf,
+    telefone: salvo.telefone ?? tutor.telefone, email: salvo.email ?? tutor.email,
+  };
 }
 
+// ---------------------------------------------------------------- pets
+
 export async function listarPetsBackend(): Promise<Pet[]> {
-  const response = await fetch(`${API_BASE_URL}/pets/lista/todos`);
+  const response = await apiFetch('/pets');
   if (!response.ok) await parseApiError(response, 'Erro ao carregar pets.');
   const lista = await response.json();
   return lista.map((p: any) => ({
-    id: p.id, nome: p.nome, especie: p.especie ?? '', raca: p.raca ?? 'SRD', sexo: p.sexo ?? 'Fêmea',
-    dataNascimento: p.dataNascimento ?? '', idade: p.idade ?? 1, peso: p.peso ?? 0, porte: p.porte ?? 'Médio',
-    cor: p.cor ?? '', observacoes: p.observacoes ?? '', tutorId: p.tutorId, tutorNome: p.tutorNome ?? 'Tutor', tutorTelefone: p.tutorTelefone ?? '',
+    id: p.id, nome: p.nome, especie: p.especie ?? '', raca: p.raca ?? '', sexo: p.sexo ?? '',
+    dataNascimento: p.dataNascimento ?? '', idade: p.idade ?? undefined, peso: p.peso ?? undefined,
+    porte: p.porte ?? '', cor: p.cor ?? '', observacoes: p.observacoes ?? '',
+    tutorId: p.tutorId, tutorNome: p.tutorNome ?? '', tutorTelefone: p.tutorTelefone ?? '',
   }));
 }
 
 export async function cadastrarPetBackend(pet: Omit<Pet, 'id'>): Promise<Pet> {
   const dataISO = normalizarDataISO(pet.dataNascimento);
   if (pet.dataNascimento && !dataISO) throw new Error('Data de nascimento inválida.');
-  const response = await fetch(`${API_BASE_URL}/pets`, {
+  const response = await apiFetch('/pets', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      nome: pet.nome, especie: pet.especie, raca: pet.raca, idade: pet.idade ?? 1, peso: pet.peso,
-      sexo: pet.sexo, porte: pet.porte, cor: pet.cor, dataNascimento: dataISO, observacoes: pet.observacoes, tutorId: pet.tutorId,
+      nome: pet.nome,
+      especie: pet.especie,
+      raca: pet.raca || null,
+      idade: pet.idade ?? null,
+      peso: pet.peso && pet.peso > 0 ? pet.peso : null,
+      sexo: pet.sexo || null,
+      porte: pet.porte || null,
+      cor: pet.cor || null,
+      dataNascimento: dataISO,
+      observacoes: pet.observacoes || null,
+      tutorId: pet.tutorId,
     }),
   });
   if (!response.ok) await parseApiError(response, 'Erro ao cadastrar paciente.');
   const salvo = await response.json();
-  return { ...pet, id: salvo.id, dataNascimento: salvo.dataNascimento ?? dataISO ?? '', tutorId: salvo.tutorId ?? pet.tutorId, tutorNome: salvo.tutorNome ?? pet.tutorNome, tutorTelefone: salvo.tutorTelefone ?? pet.tutorTelefone };
+  return {
+    ...pet, id: salvo.id, dataNascimento: salvo.dataNascimento ?? dataISO ?? '',
+    tutorId: salvo.tutorId ?? pet.tutorId, tutorNome: salvo.tutorNome ?? pet.tutorNome,
+    tutorTelefone: salvo.tutorTelefone ?? pet.tutorTelefone,
+  };
 }
 
+// ---------------------------------------------------------------- veterinários
+
 export async function listarVeterinariosBackend(): Promise<Veterinario[]> {
-  const response = await fetch(`${API_BASE_URL}/medicos/lista/todos`);
+  const response = await apiFetch('/veterinarios');
   if (!response.ok) await parseApiError(response, 'Erro ao carregar veterinários.');
   const lista = await response.json();
   return lista.map((v: any) => ({
-    id: v.id, nome: v.nome, especialidade: v.especialidade ?? v.especialidades?.[0] ?? 'Clínica geral',
-    registroProfissional: v.registroProfissional ?? '', valorConsulta: v.valorConsulta ?? 180,
+    id: v.id, nome: v.nome, especialidade: v.biografia ?? '',
+    registroProfissional: v.registroProfissional ?? '', valorConsulta: v.valorConsulta ?? undefined,
   }));
 }
 
-function mapConsultaToAgendamento(c: any, idx: number): AgendamentoItem {
-  const cores: AgendamentoItem['cor'][] = ['amber', 'blue', 'purple', 'rose', 'teal'];
-  const inicioStr: string = c.inicio ?? '';
-  const data = inicioStr.includes('T') ? inicioStr.split('T')[0] : new Date().toISOString().slice(0, 10);
-  const horario = inicioStr.includes('T') ? inicioStr.split('T')[1].slice(0, 5) : '08:00';
-  const statusMap: Record<string, AgendamentoItem['status']> = { AGENDADA: 'CONFIRMADA', REALIZADA: 'REALIZADA', CANCELADA: 'CANCELADA' };
+// ---------------------------------------------------------------- consultas
+
+const CORES: AgendamentoItem['cor'][] = ['amber', 'blue', 'purple', 'rose', 'teal'];
+
+function mapConsultaToAgendamento(c: any): AgendamentoItem {
+  const [data, hora = ''] = String(c.inicio ?? '').split('T');
+  const statusMap: Record<string, AgendamentoItem['status']> = {
+    AGENDADA: 'CONFIRMADA', REALIZADA: 'REALIZADA', CANCELADA: 'CANCELADA',
+  };
   return {
-    id: c.id, horario, petId: c.petId ?? 1, petNome: c.petNome ?? 'Paciente', tutorId: c.pacienteId ?? 1, tutorNome: c.pacienteNome ?? 'Tutor',
-    veterinarioId: c.profissionalId ?? 1, veterinarioNome: c.profissionalNome ?? 'Veterinário', tipo: c.observacoes || 'Consulta de rotina',
-    status: statusMap[c.status] ?? 'CONFIRMADA', cor: cores[idx % cores.length], data,
+    id: c.id, data, horario: hora.slice(0, 5),
+    petId: c.petId, petNome: c.petNome ?? '',
+    tutorId: c.tutorId, tutorNome: c.tutorNome ?? '',
+    veterinarioId: c.veterinarioId, veterinarioNome: c.veterinarioNome ?? '',
+    tipo: c.motivo || 'Consulta',
+    status: statusMap[c.status] ?? 'CONFIRMADA',
+    cor: CORES[Number(c.veterinarioId) % CORES.length], // cor estável por veterinário
+  };
+}
+
+const MESES = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+
+function mapConsultaToProntuario(c: any): ProntuarioRegistro {
+  const [ano, mes, dia] = String(c.inicio ?? '').split('T')[0].split('-');
+  return {
+    id: c.id, petId: c.petId,
+    data: `${dia} ${MESES[Number(mes) - 1] ?? ''} ${ano}`,
+    titulo: c.motivo || 'Atendimento clínico',
+    veterinarioNome: c.veterinarioNome ?? '',
+    versao: `consulta #${c.id}`,
+    queixaPrincipal: c.motivo ?? '', historicoEvolucao: '', alimentacao: '', ingestaoAgua: '',
+    temperatura: '', frequenciaCardiaca: '', peso: '',
+    achadosExameFisico: c.observacoes ?? '', diagnosticoPresuntivo: c.diagnostico ?? '',
+    examesSolicitados: '', prescricaoTratamento: c.prescricao ?? '', orientacoesRetorno: '',
   };
 }
 
 export async function listarConsultasBackend(): Promise<AgendamentoItem[]> {
-  const response = await fetch(`${API_BASE_URL}/consultas`);
+  const response = await apiFetch('/consultas');
   if (!response.ok) await parseApiError(response, 'Erro ao carregar consultas.');
   const lista = await response.json();
-  return lista.map((c: any, i: number) => mapConsultaToAgendamento(c, i));
+  return lista.map(mapConsultaToAgendamento);
 }
 
-export async function agendarConsultaBackend(dados: { petId: number; veterinarioId: number; data: string; horario: string; observacoes: string }): Promise<AgendamentoItem> {
-  const response = await fetch(`${API_BASE_URL}/consultas`, {
+/** Histórico clínico = consultas já realizadas (persistido no servidor). */
+export async function listarHistoricoBackend(): Promise<ProntuarioRegistro[]> {
+  const response = await apiFetch('/consultas?status=REALIZADA');
+  if (!response.ok) await parseApiError(response, 'Erro ao carregar histórico clínico.');
+  const lista = await response.json();
+  return lista.map(mapConsultaToProntuario);
+}
+
+export async function agendarConsultaBackend(dados: {
+  petId: number; tutorId?: number; veterinarioId: number; data: string; horario: string; observacoes: string;
+}): Promise<AgendamentoItem> {
+  // 1. Busca ou abre o horário (Agenda) para o veterinário na data/hora
+  let agendaId: number | null = null;
+  const respBusca = await apiFetch(`/agendas/veterinario/${dados.veterinarioId}?data=${dados.data}`);
+  if (respBusca.ok) {
+    const agendaDia = await respBusca.json();
+    const slot = (agendaDia.horarios || []).find((h: any) => String(h.horario).startsWith(dados.horario));
+    if (slot) {
+      if (!slot.disponivel) throw new Error('Conflito de horário: este horário já está reservado.');
+      agendaId = slot.id;
+    }
+  }
+  if (!agendaId) {
+    const respCriaSlot = await apiFetch('/agendas', {
+      method: 'POST',
+      body: JSON.stringify({ veterinarioId: dados.veterinarioId, data: dados.data, horarios: [dados.horario] }),
+    });
+    if (!respCriaSlot.ok) await parseApiError(respCriaSlot, 'Erro ao abrir horário na agenda.');
+    const criada = await respCriaSlot.json();
+    agendaId = criada.horarios?.[0]?.id ?? null;
+    if (!agendaId) throw new Error('Não foi possível abrir o horário na agenda.');
+  }
+
+  // 2. Reserva a consulta usando agendaId + petId + tutorId
+  const response = await apiFetch('/consultas', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ petId: dados.petId, veterinarioId: dados.veterinarioId, inicio: `${dados.data}T${dados.horario}:00`, observacoes: dados.observacoes }),
+    body: JSON.stringify({ agendaId, petId: dados.petId, tutorId: dados.tutorId, motivo: dados.observacoes }),
   });
   if (!response.ok) await parseApiError(response, 'Erro ao confirmar agendamento.');
-  return mapConsultaToAgendamento(await response.json(), 4);
+  return mapConsultaToAgendamento(await response.json());
 }
 
 export async function cancelarConsultaBackend(consultaId: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/consultas/${consultaId}/cancelar`, { method: 'PATCH' });
+  const response = await apiFetch(`/consultas/${consultaId}/cancelar`, {
+    method: 'PATCH',
+    body: JSON.stringify({ motivo: 'Cancelado pela recepção.' }),
+  });
   if (!response.ok) await parseApiError(response, 'Erro ao cancelar consulta.');
 }
 
-export async function registrarAtendimentoBackend(consultaId: number, profissionalId: number, dados: { diagnostico: string; prescricao: string; observacoes: string }): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/consultas/${consultaId}/realizar?profissionalId=${profissionalId}`, {
+/** Só funciona para o veterinário responsável pela consulta (o backend valida pelo token). */
+export async function registrarAtendimentoBackend(
+  consultaId: number, dados: { diagnostico: string; prescricao: string; observacoes: string }
+): Promise<ProntuarioRegistro> {
+  const response = await apiFetch(`/consultas/${consultaId}/realizar`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(dados),
   });
   if (!response.ok) await parseApiError(response, 'Erro ao finalizar atendimento no servidor.');
+  return mapConsultaToProntuario(await response.json());
 }
